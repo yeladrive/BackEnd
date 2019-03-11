@@ -29,15 +29,18 @@ app.get('/users/:userId', (req, res) => {
 
 exports.app = functions.https.onRequest(app);
 
-exports.onUserUpdate = functions.firestore.document('users/{userId}').onUpdate(change =>{
-  const after = change.after.data();
-  const payload = {
-    data: {
-      temp: String(after.temp),
-      conditions: after.conditions
-    }
+exports.onRideCreate = functions.firestore.document('rides/{rideId}').onCreate(snap =>{
+  var ride = snap.data();
+  //var rider = db.collection('users').doc(ride.rider_id).get();
+  //console.log(rider);
+  //var rider_name = rider.name;
+  var payload = {
+      notification:{
+        title : "Last minute ride",
+        body : "Boris needs a last minute ride"
+      }
   };
-  return admin.messaging().send(payload)
+  return admin.messaging().sendToTopic("rides", payload)
   .then(response => {
     return console.log('Successfully sent notification: ', response);
   })
