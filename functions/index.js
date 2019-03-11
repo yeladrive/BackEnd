@@ -31,20 +31,25 @@ exports.app = functions.https.onRequest(app);
 
 exports.onRideCreate = functions.firestore.document('rides/{rideId}').onCreate(snap =>{
   var ride = snap.data();
-  //var rider = db.collection('users').doc(ride.rider_id).get();
-  //console.log(rider);
-  //var rider_name = rider.name;
-  var payload = {
-      notification:{
-        title : "Last minute ride",
-        body : "Boris needs a last minute ride"
-      }
-  };
-  return admin.messaging().sendToTopic("rides", payload)
-  .then(response => {
-    return console.log('Successfully sent notification: ', response);
-  })
-  .catch(error => {
-    return console.error('Failed to send notification', error);
-  });
-})
+  return db.collection('users').doc(ride.rider_id).get()
+    .then(user => {
+      var user_name = user.data().name;
+      var payload = {
+          notification:{
+            title : "Last minute ride",
+            body : user_name + " needs a last minute ride"
+          }
+        };
+        console.log(user);
+        console.log(user.data());
+        console.log(user_name);
+        console.log(payload);
+        return admin.messaging().sendToTopic("rides", payload)
+      })
+      .then(response => {
+        return console.log('Successfully sent notification: ', response);
+        })
+      .catch(error => {
+        return console.error('Failed to send notification', error);
+      });
+    });
