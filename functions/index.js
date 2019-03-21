@@ -1,17 +1,14 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
-<<<<<<< HEAD
+
 const { MAP_API_KEY } = require('./config.json');
 
 const googleMapsClient = require('@google/maps').createClient({
-  key : MAP_API_KEY,
-=======
-const googleMapsClient = require('@google/maps').createClient({
-  key: 'AIzaSyC06YsJF2amTAYEKA2JOiKlndPPWLkLjgY',
->>>>>>> 7810ff0fc32614b7084d643be3b4c302fccdaf66
+  key: MAP_API_KEY,
   Promise: Promise
 })
+
 const express = require('express');
 
 
