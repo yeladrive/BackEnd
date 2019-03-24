@@ -3,6 +3,9 @@ const admin = require('firebase-admin');
 
 
 const { MAP_API_KEY } = require('./config.json');
+//const geofire = require('./GeoFire.js');
+
+var GeoFirestore = require('geofirestore').GeoFirestore;
 
 const googleMapsClient = require('@google/maps').createClient({
   key: MAP_API_KEY,
@@ -10,12 +13,16 @@ const googleMapsClient = require('@google/maps').createClient({
 })
 
 const express = require('express');
-
-
-
 admin.initializeApp();
 const app = express();
 const db = admin.firestore()
+
+const geofirestore = new GeoFirestore(db);
+const geodrives= geofirestore.collection('drives');
+
+
+
+
 
 app.get('/home', (req, res) => {
   const hw = {message: 'Hello World, it worked'};
@@ -80,28 +87,39 @@ exports.onUserCreate = functions.auth.user().onCreate(event => {
 exports.onRideCreate = functions.firestore.document('rides/{rideId}').onCreate( (data, context) =>{
   var ride_info = data.data();
   var ride_id = context.params.rideId;
-  console.log(ride_id);
+  // console.log(ride_id);
   const rideRef = db.collection('rides').doc(ride_id);
+  const driveRef = db.collection('drives');
 
   var pick_loc = ride_info.pickup_location;
   var drop_loc = ride_info.dropoff_location;
-  console.log(pick_loc);
-  console.log(drop_loc);
+  // console.log(pick_loc);
+  // console.log(drop_loc);
 
   return googleMapsClient.geocode({address: pick_loc})
     .asPromise()
     .then((response) => {
       pick_loc = response.json.results[0].geometry.location;
-      console.log(pick_loc);
-      var latitude = pick_loc.lat;
-      var longitude = pick_loc.lng;
 
-      var geopoint = new admin.firestore.GeoPoint(latitude, longitude);
-      return rideRef.set({  pickup_geopoint: geopoint }, { merge: true });
-    })
-    .then((response) => {
-      return console.log('Successfully retrieved and save Geopoint to Firestore: ', response);
-    })
+      var geopoint = new admin.firestore.GeoPoint(pick_loc.lat, pick_loc.lng)
+      rideRef.set({  l: geopoint }, { merge: true });
+      //console.log('collection drives', geodrives);
+
+      const query = geodrives.near({center : geopoint, radius :20});
+      //console.log('query', query);
+
+      return query.get()
+      })
+      .then( (value) => {
+        var results = value.forEach( doc => {
+          console.log(doc.data());
+        });
+        return null;
+      })
+
+      //return geofire(driveRef, pick_loc, 35);
+      //var geopoint = new admin.firestore.GeoPoint(latitude, longitude);
+      //return rideRef.set({  pickup_geopoint: geopoint }, { merge: true });
     .catch((error) => {
       return console.error('Failed to get location :', error);
     });
