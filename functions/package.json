@@ -9,12 +9,16 @@
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
   },
+  "engines": {
+    "node": "8"
+  },
   "dependencies": {
     "@google/maps": "^0.5.5",
     "express": "^4.16.4",
     "firebase-admin": "~7.0.0",
-    "firebase-functions": "^2.2.0",
-    "geofirestore": "^3.2.2"
+    "firebase-functions": "^2.2.1",
+    "geofirestore": "^3.2.2",
+    "latlon-geohash": "^1.1.0"
   },
   "devDependencies": {
     "eslint": "^5.12.0",
