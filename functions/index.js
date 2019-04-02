@@ -403,6 +403,7 @@ exports.onDriveDropOffCreate = functions.firestore.document('dropoff_for_drive/{
     var nearby_pick_ride_list = new Array();
     var nearby_rides = new Array();
     var rides = new Array();
+    var drive = new Array();
     var queries = new Array();
 
     //list of querysnapshot that match drop location
@@ -458,18 +459,59 @@ exports.onDriveDropOffCreate = functions.firestore.document('dropoff_for_drive/{
     console.log("snapRide", snapRide);
 
     for (i=0; i < snapRide.length; i++){
-      var ride = snapRide[i].data();
+      var ride = { ride_id: snapRide[i].id, ride_data: snapRide[i].data()};
       console.log("ride",i,ride);
         rides.push(ride);
       }
     var snapDrive = await db.collection('drives').doc(drop_info.d.drive_id).get();
-    var drive = snapDrive.data();
+    drive.push({ drive_id: driveId, drive_data: snapDrive.data()});
 
-    var match = { drive : drive, rides : rides};
+    console.log("drive", drive);
+    console.log("rides", rides);
 
-    console.log("match:", match);
+    if (rides.length > 0){
+      var results = [];
+      for (let ride of rides){
+        results.push(db.collection('match').where("ride.ride_id", "==", ride.ride_id).get());
+      }
+      var snapMatch = await Promise.all(results);
 
-    return db.collection("match").add(match);
+      console.log("snapMatch", snapMatch);
+
+      var updates =[];
+      var creates =[];
+
+      for (let snap of snapMatch) {
+        console.log("snapMatch empty ?", snap.empty);
+        if (snap.empty === false){
+          var matchedRide = snap.docs;
+          console.log("matchedRide", matchedRide);
+          console.log("match to update", matchedRide[0]);
+          updates.push(db.collection('match').doc(matchedRide[0].id).update({
+            drive: admin.firestore.FieldValue.arrayUnion(drive[0])
+          }));
+          console.log("update");
+        } else {
+          var match = { drive: drive, ride: ride};
+          console.log("match to create:", match);
+          console.log("create");
+          creates.push(db.collection("match").add(match));
+        }
+      }
+
+       var matchUpdated = await Promise.all(updates);
+       var matchCreated = await Promise.all(creates);
+
+       return("match updated", matchUpdated, "\n match created", matchCreated);
+      // console.log("snapMatch empty ?", snapMatch[0].empty);
+      // console.log("snapMatch size ?", snapMatch[0].size);
+      // console.log("snapMatch docs:", snapMatch.docs);
+
+
+
+    } else {
+      return console.log("no match found");
+    }
 
   } catch (e) {
     return console.log("ca marche pas:", e);
