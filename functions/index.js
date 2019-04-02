@@ -218,43 +218,59 @@ exports.onRideCreate = functions.firestore.document('rides/{rideId}').onCreate( 
 exports.onRideDropOffCreate = functions.firestore.document('dropoff_for_ride/{dropId}').onCreate( async (data, context) => {
   try {
     var drop_info = data.data();
+    console.log("drop_info", drop_info);
     var drop_id = context.params.dropId;
-    const geodrives = geofirestore.collection('dropoff_for_drive');
-    const driveRef = db.collection('dropoff_for_drive');
+    var geodrop = geofirestore.collection('dropoff_for_drive');
+    var geopick =  geofirestore.collection('pickup_for_drive');
+    var rideRef = db.collection('dropoff_for_ride');
+    var driveRef = db.collection('dropoff_for_drive');
 
     var nearby_drop_drive_list = new Array();
+    var nearby_pick_drive_list = new Array();
     var nearby_drives = new Array();
     var drives = new Array();
     var queries = new Array();
 
-    var geopoint = new admin.firestore.GeoPoint(drop_info.l._latitude, drop_info.l._longitude);
-    var query = geodrives.near({center: geopoint, radius: 20});
-
     //list of querysnapshot that match drop location
+    var geopoint = new admin.firestore.GeoPoint(drop_info.l._latitude, drop_info.l._longitude);
+    var query = geodrop.near({center: geopoint, radius: 20});
     var snapDrop = await query.get();
     console.log("snapDrop", snapDrop);
-
     snapDrop.forEach(drop => {
       nearby_drop_drive_list.push(drop.data());
     })
-
     //list of dropoff_for_drive documents that match drop location
     console.log("nearby_drop_drive_list:",nearby_drop_drive_list);
 
-    // list of queries to get the pick documents
-    for (i=0; i < nearby_drop_drive_list.length; i++){
-          console.log("item", i, nearby_drop_drive_list[i]);
-          queries.push(driveRef.where("d.drive_id", "==", nearby_drop_drive_list[i].drive_id));
+    //get the corresponding pickup document of the drop document created
+    var rideId = drop_info.d.ride_id;
+    console.log("ride Id", rideId);
+    var pickupSnap = await db.collection('pickup_for_ride').where("d.ride_id","==", rideId).get();
+    console.log("pickupsnap", pickupSnap);
+    var pickupDoc;
+    pickupSnap.forEach(doc => {
+    pickupDoc = doc.data();
+    })
+    console.log("pickupDoc", pickupDoc);
+
+    //list of querynsapshot that match pick location
+    geopoint = new admin.firestore.GeoPoint(pickupDoc.l._latitude, pickupDoc.l._longitude);
+    query = geopick.near({center: geopoint, radius: 20});
+    var snapPick = await query.get();
+    console.log("snapPick", snapPick);
+    snapPick.forEach(pick => {
+      nearby_pick_drive_list.push(pick.data());
+    })
+    //list of pickup_for_drive documents that match pickup location
+    console.log("nearby_pick_drive_list:",nearby_pick_drive_list);
+
+    //create the list of drives that match both drop and pick
+    for (let drop of nearby_drop_drive_list){
+      for (let pick of nearby_pick_drive_list){
+        if (drop.drive_id === pick.drive_id){
+          nearby_drives.push(drop.drive_id);
         }
-    console.log("queries:",queries);
-
-    //list of querysnapshot of pickup_for_drive that match pick location among the ones that already matched the drop location
-    var snapPick = await Promise.all(queries.map(query => query.get()));
-
-    for (i=0; i < snapPick.length; i++){
-      snapPick[i].forEach(doc => {
-        nearby_drives.push(doc.data().d.drive_id);
-      });
+      }
     }
 
     //list drive documents id that match drop and pick
@@ -284,7 +300,6 @@ exports.onRideDropOffCreate = functions.firestore.document('dropoff_for_ride/{dr
   } catch (e) {
     return console.log("ca marche pas:", e);
   }
-
 
 });
 
@@ -375,43 +390,58 @@ exports.onDriveCreate = functions.firestore.document('drives/{driveId}').onCreat
 exports.onDriveDropOffCreate = functions.firestore.document('dropoff_for_drive/{dropId}').onCreate( async (data, context) => {
   try {
     var drop_info = data.data();
+    console.log("drop_info", drop_info);
     var drop_id = context.params.dropId;
-    const georides = geofirestore.collection('dropoff_for_ride');
+    var geodrop = geofirestore.collection('dropoff_for_ride');
+    var geopick = geofirestore.collection('pickup_for_ride');
     const rideRef = db.collection('dropoff_for_ride');
 
     var nearby_drop_ride_list = new Array();
+    var nearby_pick_ride_list = new Array();
     var nearby_rides = new Array();
     var rides = new Array();
     var queries = new Array();
 
-    var geopoint = new admin.firestore.GeoPoint(drop_info.l._latitude, drop_info.l._longitude);
-    var query = georides.near({center: geopoint, radius: 20});
-
     //list of querysnapshot that match drop location
+    var geopoint = new admin.firestore.GeoPoint(drop_info.l._latitude, drop_info.l._longitude);
+    var query = geodrop.near({center: geopoint, radius: 20});
     var snapDrop = await query.get();
     console.log("snapDrop", snapDrop);
-
     snapDrop.forEach(drop => {
       nearby_drop_ride_list.push(drop.data());
     })
-
     //list of dropoff_for_drive documents that match drop location
     console.log("nearby_drop_ride_list:",nearby_drop_ride_list);
 
-    // list of queries to get the pick documents
-    for (i=0; i < nearby_drop_ride_list.length; i++){
-          console.log("item", i, nearby_drop_ride_list[i]);
-          queries.push(rideRef.where("d.ride_id", "==", nearby_drop_ride_list[i].ride_id));
+    //get the corresponding pickup document of the drop document created
+    var driveId = drop_info.d.drive_id;
+    console.log("drive Id", driveId);
+    var pickupSnap = await db.collection('pickup_for_drive').where("d.drive_id", "==", driveId).get();
+    console.log("pickupSnap", pickupSnap);
+    var pickupDoc;
+    pickupSnap.forEach(doc => {
+    pickupDoc = doc.data();
+    })
+    console.log("pickupDoc", pickupDoc);
+
+    //list of querysnapshot that match pick location
+    geopoint = new admin.firestore.GeoPoint(pickupDoc.l._latitude, pickupDoc.l._longitude);
+    query = geopick.near({center: geopoint, radius: 20});
+    var snapPick = await query.get();
+    console.log("snapPick", snapPick);
+    snapPick.forEach(pick => {
+      nearby_pick_ride_list.push(pick.data());
+    })
+    //list of pickup_for_drive documents that match pickup location
+    console.log("nearby_pick_drive_list:",nearby_pick_ride_list);
+
+    //create the list of drives that match both drop and pick
+    for (let drop of nearby_drop_ride_list){
+      for (let pick of nearby_pick_ride_list){
+        if (drop.ride_id === pick.ride_id){
+          nearby_rides.push(drop.ride_id);
         }
-    console.log("queries:",queries);
-
-    //list of querysnapshot of pickup_for_drive that match pick location among the ones that already matched the drop location
-    var snapPick = await Promise.all(queries.map(query => query.get()));
-
-    for (i=0; i < snapPick.length; i++){
-      snapPick[i].forEach(doc => {
-        nearby_rides.push(doc.data().d.ride_id);
-      });
+      }
     }
 
     //list drive documents id that match drop and pick
@@ -441,6 +471,5 @@ exports.onDriveDropOffCreate = functions.firestore.document('dropoff_for_drive/{
   } catch (e) {
     return console.log("ca marche pas:", e);
   }
-
 
 });
