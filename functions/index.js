@@ -291,11 +291,14 @@ exports.onRideDropOffCreate = functions.firestore.document('dropoff_for_ride/{dr
     var snapRide = await db.collection('rides').doc(drop_info.d.ride_id).get();
     var ride = {ride_id : rideId, ride_data: snapRide.data()};
 
-    var match = { ride : ride, drive : drives};
+    if (drives.length > 0){
+      var match = { ride : ride, drive : drives};
+      console.log("match:", match);
+      return db.collection("match").add(match);
+    } else {
+      return console.log("no match found");
+    }
 
-    console.log("match:", match);
-
-    return db.collection("match").add(match);
 
   } catch (e) {
     return console.log("ca marche pas:", e);
