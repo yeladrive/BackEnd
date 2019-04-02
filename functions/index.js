@@ -284,14 +284,14 @@ exports.onRideDropOffCreate = functions.firestore.document('dropoff_for_ride/{dr
     console.log("snapDrive", snapDrive);
 
     for (i=0; i < snapDrive.length; i++){
-      var drive = snapDrive[i].data();
+      var drive = {drive_id: snapDrive[i].id, drive_data : snapDrive[i].data()};
       console.log("drive",i,drive);
         drives.push(drive);
       }
     var snapRide = await db.collection('rides').doc(drop_info.d.ride_id).get();
-    var ride = snapRide.data();
+    var ride = {ride_id : rideId, ride_data: snapRide.data()};
 
-    var match = { ride : ride, drives : drives};
+    var match = { ride : ride, drive : drives};
 
     console.log("match:", match);
 
